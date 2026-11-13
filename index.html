@@ -1,0 +1,333 @@
+<!doctype html>
+<html lang="en-NZ">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#5b4b8a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Pain Log">
+<title>Pain Log</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon.svg">
+<style>
+:root{--bg:#f6f4fa;--card:#fff;--ink:#241f31;--muted:#6f6a7d;--line:#e3dff0;--accent:#5b4b8a;--l0:#8fb8a0;--l1:#e8b84a;--l2:#e8844a;--l3:#cf3f4f}
+@media(prefers-color-scheme:dark){:root{--bg:#16131e;--card:#1f1b2b;--ink:#eeeaf8;--muted:#9a94ad;--line:#322c45;--accent:#a592e0}}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.4 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;padding-bottom:calc(76px + env(safe-area-inset-bottom))}
+header{position:sticky;top:0;z-index:5;background:var(--accent);color:#fff;padding:calc(10px + env(safe-area-inset-top)) 16px 10px;font-weight:600;display:flex;justify-content:space-between;align-items:center}
+header small{font-weight:400;opacity:.85}
+main{max-width:640px;margin:0 auto;padding:12px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin:0 0 12px}
+h2{font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:0 0 8px}
+.row{padding:8px 0;border-top:1px solid var(--line)}.row:first-of-type{border-top:0}
+.lbl{font-weight:600;margin-bottom:6px}
+.seg{display:flex;gap:6px}
+.seg button{flex:1;padding:10px 2px;border:1px solid var(--line);background:transparent;color:var(--ink);border-radius:10px;font-size:14px}
+.seg button.on{color:#fff;border-color:transparent;font-weight:600}
+.on.l0{background:var(--l0)}.on.l1{background:var(--l1);color:#241f31!important}.on.l2{background:var(--l2)}.on.l3{background:var(--l3)}
+.on.yes{background:var(--accent)}.on.no{background:var(--l0)}
+textarea,input[type=text],input[type=date],input[type=number],select{width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink);font:inherit}
+textarea{resize:vertical;min-height:56px}
+.note{margin-top:6px}
+button.btn{background:var(--accent);color:#fff;border:0;border-radius:10px;padding:10px 14px;font:inherit;font-weight:600}
+button.btn.alt{background:transparent;color:var(--accent);border:1px solid var(--accent)}
+button.btn.danger{background:var(--l3)}
+.nav{display:flex;gap:8px;align-items:center;margin-bottom:12px}
+.nav button{width:44px;height:44px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--ink);font-size:20px}
+.nav input{flex:1;text-align:center}
+nav.tabs{position:fixed;bottom:0;left:0;right:0;background:var(--card);border-top:1px solid var(--line);display:flex;padding-bottom:env(safe-area-inset-bottom);z-index:6}
+nav.tabs button{flex:1;padding:10px 0 8px;border:0;background:transparent;color:var(--muted);font-size:11px}
+nav.tabs button span{display:block;font-size:20px}
+nav.tabs button.on{color:var(--accent);font-weight:700}
+.chips{display:flex;flex-wrap:wrap;gap:4px;margin:4px 0}
+.chip{font-size:12px;padding:2px 8px;border-radius:20px;color:#fff}
+.chip.c1{background:var(--l1);color:#241f31}.chip.c2{background:var(--l2)}.chip.c3{background:var(--l3)}
+.muted{color:var(--muted);font-size:14px}
+.hist{cursor:pointer}.hist b{display:block}
+.banner{background:#fff3cd;color:#5c4400;border-radius:12px;padding:10px 12px;margin-bottom:12px;font-size:14px}
+pre.sum{white-space:pre-wrap;font:14px/1.5 ui-monospace,Menlo,monospace;margin:0}
+.flex{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.bars{display:flex;align-items:flex-end;gap:3px;height:80px}
+.bars div{flex:1;background:var(--accent);border-radius:3px 3px 0 0;min-height:2px}
+.axis{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-top:2px}
+svg{width:100%;height:auto;display:block}
+.li{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-top:1px solid var(--line)}
+.li button{background:none;border:0;color:var(--l3);font-size:14px}
+#toast{position:fixed;left:50%;bottom:calc(90px + env(safe-area-inset-bottom));transform:translateX(-50%);background:#241f31;color:#fff;padding:8px 14px;border-radius:20px;font-size:14px;opacity:0;transition:opacity .3s;pointer-events:none;z-index:9}
+#toast.show{opacity:.95}
+</style>
+</head>
+<body>
+<header><div>Pain Log</div><small id="saved"></small></header>
+<main id="view"></main>
+<nav class="tabs" id="tabs">
+<button data-t="today"><span>✏️</span>Today</button>
+<button data-t="history"><span>📅</span>History</button>
+<button data-t="trends"><span>📈</span>Trends</button>
+<button data-t="summary"><span>🩺</span>Summary</button>
+<button data-t="settings"><span>⚙️</span>Settings</button>
+</nav>
+<div id="toast"></div>
+<script>
+const $=s=>document.querySelector(s);
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const KEY='painlog.v1', LV=['No','Yes','Bad','Very bad'];
+const DEF={pain:['Pudendal nerve (PN)','SI joint','Hip','Lower back','Constipation'],spasm:['Glutes','Lower back'],treat:['GABA','Back TENS','IV TENS']};
+let storageOK=true;
+let S=load();
+function load(){
+  try{const r=JSON.parse(localStorage.getItem(KEY));
+    if(r&&r.entries)return{config:Object.assign(JSON.parse(JSON.stringify(DEF)),r.config||{}),entries:r.entries,lastExport:r.lastExport||null};
+  }catch(e){}
+  return{config:JSON.parse(JSON.stringify(DEF)),entries:{},lastExport:null};
+}
+function clean(e){
+  for(const k of['pain','spasm','treat','treatNote']){
+    if(!e[k])e[k]={};
+    for(const n of Object.keys(e[k])){const v=e[k][n];if(v===undefined||v===null||(typeof v==='string'&&!v.trim()))delete e[k][n];}
+  }
+  for(const k of['biggest','inhib','medical','other'])if(!e[k]||!String(e[k]).trim())e[k]='';
+  return e;
+}
+function isEmpty(e){return !Object.keys(e.pain).length&&!Object.keys(e.spasm).length&&!Object.keys(e.treat).length&&!Object.keys(e.treatNote).length&&!e.biggest&&!e.inhib&&!e.medical&&!e.other;}
+function save(){
+  for(const d of Object.keys(S.entries)){clean(S.entries[d]);if(isEmpty(S.entries[d]))delete S.entries[d];}
+  try{localStorage.setItem(KEY,JSON.stringify(S));$('#saved').textContent='Saved ✓';}
+  catch(e){storageOK=false;$('#saved').textContent='NOT SAVED';toast('Could not save – browser storage blocked');}
+}
+let st;function saveSoon(){clearTimeout(st);$('#saved').textContent='…';st=setTimeout(save,400);}
+function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2200);}
+
+/* dates */
+const pad=n=>String(n).padStart(2,'0');
+const ymd=d=>d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+const parse=s=>{const[a,b,c]=s.split('-').map(Number);return new Date(a,b-1,c);};
+const addDays=(s,n)=>{const d=parse(s);d.setDate(d.getDate()+n);return ymd(d);};
+const today=()=>ymd(new Date());
+const nice=s=>parse(s).toLocaleDateString('en-NZ',{weekday:'short',day:'numeric',month:'short',year:'numeric'});
+const short=s=>parse(s).toLocaleDateString('en-NZ',{day:'numeric',month:'short'});
+const diff=(a,b)=>Math.round((parse(b)-parse(a))/864e5);
+
+let cur=today(), tab='today';
+const blank=()=>({pain:{},spasm:{},treat:{},treatNote:{},biggest:'',inhib:'',medical:'',other:''});
+const ent=()=>S.entries[cur]||(S.entries[cur]=blank());
+const allKeys=kind=>{const s=new Set(S.config[kind]);for(const e of Object.values(S.entries))Object.keys(e[kind]||{}).forEach(k=>s.add(k));return[...s];};
+
+/* ---------- Today ---------- */
+function viewToday(){
+  const e=S.entries[cur]||blank();
+  const daysSinceExport=S.lastExport?diff(S.lastExport,today()):null;
+  const needBackup=Object.keys(S.entries).length>=5&&(daysSinceExport===null||daysSinceExport>14);
+  let h='';
+  if(!storageOK)h+='<div class="banner">Browser storage is blocked – entries will not be kept. Try a normal (non-private) tab.</div>';
+  if(needBackup)h+='<div class="banner">Tip: you haven\'t exported a backup recently. Settings → Export backup.</div>';
+  h+=`<div class="nav"><button data-a="prev">‹</button><input type="date" id="dp" value="${cur}" max="${today()}"><button data-a="next">›</button></div>`;
+  h+=`<div class="muted" style="margin:-4px 0 10px;text-align:center">${cur===today()?'Today – ':''}${nice(cur)}</div>`;
+  h+=`<section class="card"><h2>Biggest problem of the day</h2><div class="muted" style="margin-bottom:6px">What was it really, today?</div><textarea rows="2" data-f="biggest">${esc(e.biggest||'')}</textarea></section>`;
+  h+=`<section class="card"><h2>Pain</h2>`+S.config.pain.map(n=>`<div class="row"><div class="lbl">${esc(n)}</div><div class="seg" data-k="pain" data-n="${esc(n)}">${LV.map((l,i)=>`<button data-v="${i}" class="${e.pain[n]===i?'on l'+i:''}">${l}</button>`).join('')}</div></div>`).join('')+
+    `<div style="margin-top:8px"><button class="btn alt" data-a="allno">Good day – set unanswered to “No”</button></div></section>`;
+  h+=`<section class="card"><h2>Muscle spasms</h2>`+S.config.spasm.map(n=>`<div class="row"><div class="lbl">${esc(n)}</div><textarea rows="2" data-f="spasm" data-n="${esc(n)}" placeholder="What did it feel like, when?">${esc(e.spasm[n]||'')}</textarea></div>`).join('')+`</section>`;
+  h+=`<section class="card"><h2>Inhibitions</h2><div class="muted" style="margin-bottom:6px">Things you avoided or held back from because of pain</div><textarea rows="3" data-f="inhib">${esc(e.inhib)}</textarea></section>`;
+  h+=`<section class="card"><h2>Treatment</h2>`+S.config.treat.map(n=>`<div class="row"><div class="lbl">${esc(n)}</div><div class="seg" data-k="treat" data-n="${esc(n)}"><button data-v="no" class="${e.treat[n]==='no'?'on no':''}">No</button><button data-v="yes" class="${e.treat[n]==='yes'?'on yes':''}">Yes</button></div><input class="note" type="text" data-f="tnote" data-n="${esc(n)}" placeholder="Notes – how did it help?" value="${esc(e.treatNote[n]||'')}"></div>`).join('')+
+    `<div class="row"><div class="lbl">Other</div><textarea rows="2" data-f="other">${esc(e.other)}</textarea></div></section>`;
+  h+=`<section class="card"><h2>Medical</h2><div class="muted" style="margin-bottom:6px">Appointments, advice, questions to ask</div><textarea rows="4" data-f="medical">${esc(e.medical)}</textarea></section>`;
+  $('#view').innerHTML=h;
+}
+
+/* ---------- History ---------- */
+function viewHistory(){
+  const ds=Object.keys(S.entries).sort().reverse();
+  if(!ds.length){$('#view').innerHTML='<section class="card muted">Nothing logged yet. Entries will appear here.</section>';return;}
+  $('#view').innerHTML=ds.map(d=>{
+    const e=S.entries[d];
+    const chips=Object.entries(e.pain).filter(([k,v])=>v>0).map(([k,v])=>`<span class="chip c${v}">${esc(k)}: ${LV[v]}</span>`).join('');
+    const tr=Object.entries(e.treat).filter(([k,v])=>v==='yes').map(([k])=>k).join(', ');
+    const snip=e.medical||e.inhib||'';
+    return`<section class="card hist" data-d="${d}"><b>${nice(d)}</b>${e.biggest?`<div><i>Biggest problem:</i> ${esc(e.biggest.slice(0,120))}${e.biggest.length>120?'…':''}</div>`:''}<div class="chips">${chips||'<span class="muted">No pain items above “No”</span>'}</div>${tr?`<div class="muted">Treatment: ${esc(tr)}</div>`:''}${snip?`<div class="muted">${esc(snip.slice(0,120))}${snip.length>120?'…':''}</div>`:''}</section>`;
+  }).join('');
+}
+
+/* ---------- Trends ---------- */
+let tr={key:null,range:'90',cycle:28};
+const levelColor=['var(--l0)','var(--l1)','var(--l2)','var(--l3)'];
+function seriesFor(key,range){
+  const ds=Object.keys(S.entries).sort();if(!ds.length)return{dates:[],vals:[]};
+  const end=today();
+  const start=range==='all'?ds[0]:addDays(end,-(+range-1));
+  const dates=[];for(let d=start;d<=end;d=addDays(d,1))dates.push(d);
+  return{dates,vals:dates.map(d=>{const e=S.entries[d];const v=e&&e.pain[key];return v===undefined?null:v;})};
+}
+function dayChart(vals){
+  const n=vals.length,W=n*10,H=100;
+  let b='';vals.forEach((v,i)=>{if(v===null)return;const h=v===0?3:(v/3)*92;b+=`<rect x="${i*10+1}" y="${H-h}" width="8" height="${h}" rx="2" fill="${levelColor[v]}"/>`;});
+  return`<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="height:110px"><line x1="0" x2="${W}" y1="${H}" y2="${H}" stroke="var(--line)"/>${b}</svg>`;
+}
+function barsHtml(avgs,labels){
+  return`<div class="bars">${avgs.map(a=>`<div style="height:${a===null?0:Math.max(2,a/3*100)}%"></div>`).join('')}</div><div class="axis">${labels.map(l=>`<span>${l}</span>`).join('')}</div>`;
+}
+function autocorr(vals,lag){
+  const x=vals.filter(v=>v!==null);if(x.length<10)return null;
+  const m=x.reduce((a,b)=>a+b,0)/x.length;
+  let num=0,da=0,db=0,n=0;
+  for(let i=0;i+lag<vals.length;i++){const a=vals[i],b=vals[i+lag];if(a===null||b===null)continue;num+=(a-m)*(b-m);da+=(a-m)**2;db+=(b-m)**2;n++;}
+  if(n<15||da===0||db===0)return null;
+  return{r:num/Math.sqrt(da*db),n};
+}
+function viewTrends(){
+  const keys=allKeys('pain');
+  if(!keys.length||!Object.keys(S.entries).length){$('#view').innerHTML='<section class="card muted">Log a few days first, then trends will show here.</section>';return;}
+  if(!tr.key||!keys.includes(tr.key))tr.key=keys.includes('Lower back')?'Lower back':keys[0];
+  const{dates,vals}=seriesFor(tr.key,tr.range);
+  const logged=vals.filter(v=>v!==null).length;
+  let h=`<section class="card"><div class="flex"><select id="trk" style="flex:2">${keys.map(k=>`<option ${k===tr.key?'selected':''}>${esc(k)}</option>`).join('')}</select><select id="trr" style="flex:1">${[['30','30 days'],['90','90 days'],['365','1 year'],['all','All']].map(([v,l])=>`<option value="${v}" ${v===tr.range?'selected':''}>${l}</option>`).join('')}</select></div></section>`;
+  h+=`<section class="card"><h2>Daily level – ${logged} of ${dates.length} days logged</h2>${dayChart(vals)}<div class="axis"><span>${dates.length?short(dates[0]):''}</span><span>${dates.length?short(dates[dates.length-1]):''}</span></div><div class="chips" style="margin-top:8px">${LV.map((l,i)=>`<span class="chip" style="background:${levelColor[i]};${i===1?'color:#241f31':''}">${l}</span>`).join('')}</div></section>`;
+  // weekday
+  const wd=Array.from({length:7},()=>[]);
+  dates.forEach((d,i)=>{if(vals[i]!==null)wd[parse(d).getDay()].push(vals[i]);});
+  const order=[1,2,3,4,5,6,0],names=['Su','Mo','Tu','We','Th','Fr','Sa'];
+  h+=`<section class="card"><h2>Average by weekday</h2>${barsHtml(order.map(i=>wd[i].length?wd[i].reduce((a,b)=>a+b,0)/wd[i].length:null),order.map(i=>names[i]))}</section>`;
+  // pattern finder (all data)
+  const all=seriesFor(tr.key,'all');
+  h+=`<section class="card"><h2>Is there a repeating cycle?</h2>`;
+  if(all.vals.length<45||all.vals.filter(v=>v!==null).length<30){
+    h+=`<div class="muted">Needs at least ~6 weeks of fairly regular logging for ${esc(tr.key)} (you have ${all.vals.filter(v=>v!==null).length} days). Keep going – a cycle of ~28 days needs 2–3 full cycles before it means much.</div>`;
+  }else{
+    const maxLag=Math.min(60,Math.floor(all.vals.length/2));const rs=[];
+    for(let L=3;L<=maxLag;L++)rs.push({L,c:autocorr(all.vals,L)});
+    const ok=rs.filter(x=>x.c);
+    if(!ok.length)h+='<div class="muted">Not enough overlapping days yet.</div>';
+    else{
+      const best=ok.reduce((a,b)=>b.c.r>a.c.r?b:a);
+      const W=rs.length*8,H=100,mid=50;
+      let b='';rs.forEach((x,i)=>{if(!x.c)return;const hh=x.c.r*46;b+=`<rect x="${i*8+1}" width="6" y="${hh>=0?mid-hh:mid}" height="${Math.abs(hh)||1}" fill="${x.L===best.L?'var(--l3)':'var(--accent)'}" opacity="${x.L===best.L?1:.6}"/>`;});
+      h+=`<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="height:100px"><line x1="0" x2="${W}" y1="${mid}" y2="${mid}" stroke="var(--line)"/>${b}</svg><div class="axis"><span>${rs[0].L} days apart</span><span>${rs[rs.length-1].L} days apart</span></div>`;
+      h+=`<div class="muted" style="margin-top:8px">Each bar shows how similar your pain tends to be on days that many days apart (taller = more similar). Strongest repeat: <b>${best.L} days</b> (r = ${best.c.r.toFixed(2)}). ${best.c.r>=0.35?'That is a noticeable repeat, though it is still worth checking with more data.':'That is weak – no clear cycle yet.'} This is a rough guide only, not a diagnosis.</div>`;
+    }
+  }
+  h+=`</section>`;
+  // fold
+  const L=Math.max(2,Math.min(60,+tr.cycle||28));
+  const anchor=all.dates[0]||today();
+  const buckets=Array.from({length:L},()=>[]);
+  all.dates.forEach((d,i)=>{if(all.vals[i]!==null)buckets[diff(anchor,d)%L].push(all.vals[i]);});
+  h+=`<section class="card"><h2>Fold into a cycle</h2><div class="muted" style="margin-bottom:6px">Try a cycle length and see whether the average line up. Day 1 = ${short(anchor)} (your first entry) and repeats every N days.</div><div class="flex" style="margin-bottom:8px"><span>Cycle length</span><input type="number" id="trc" value="${L}" min="2" max="60" style="width:90px"><span>days</span></div>${barsHtml(buckets.map(a=>a.length?a.reduce((x,y)=>x+y,0)/a.length:null),['Day 1',`Day ${L}`])}</section>`;
+  $('#view').innerHTML=h;
+}
+
+/* ---------- Summary ---------- */
+let sumDays=14;
+function buildSummary(days){
+  const end=today(),start=addDays(end,-(days-1));
+  const ds=Object.keys(S.entries).filter(d=>d>=start&&d<=end).sort();
+  let t=`Pain log: ${nice(start)} to ${nice(end)}\nDays logged: ${ds.length} of ${days}\n`;
+  if(!ds.length)return t+'\nNo entries in this period.';
+  t+='\nPAIN (days at each level)\n';
+  for(const k of allKeys('pain')){
+    const c=[0,0,0,0];let any=false;
+    ds.forEach(d=>{const v=S.entries[d].pain[k];if(v!==undefined){c[v]++;any=true;}});
+    if(any)t+=`• ${k}: no ${c[0]}, yes ${c[1]}, bad ${c[2]}, very bad ${c[3]}\n`;
+  }
+  t+='\nTREATMENT (days used)\n';
+  for(const k of allKeys('treat')){
+    const logged=ds.filter(d=>S.entries[d].treat[k]!==undefined);
+    if(!logged.length)continue;
+    const used=logged.filter(d=>S.entries[d].treat[k]==='yes');
+    t+=`• ${k}: used ${used.length} of ${logged.length} days logged\n`;
+    used.forEach(d=>{const n=S.entries[d].treatNote[k];if(n)t+=`    ${short(d)}: ${n}\n`;});
+  }
+  const lists=[['BIGGEST PROBLEM OF THE DAY',e=>e.biggest?[e.biggest]:[]],['MUSCLE SPASMS',e=>Object.entries(e.spasm).map(([k,v])=>`${k}: ${v}`)],['INHIBITIONS',e=>e.inhib?[e.inhib]:[]],['OTHER TREATMENT',e=>e.other?[e.other]:[]],['MEDICAL NOTES',e=>e.medical?[e.medical]:[]]];
+  for(const[title,fn]of lists){
+    const lines=[];ds.forEach(d=>fn(S.entries[d]).forEach(x=>lines.push(`${short(d)} – ${x}`)));
+    if(lines.length)t+=`\n${title}\n`+lines.map(l=>'• '+l).join('\n')+'\n';
+  }
+  return t;
+}
+function viewSummary(){
+  $('#view').innerHTML=`<section class="card"><div class="flex"><select id="sd" style="flex:1">${[7,14,30,60,90,180].map(n=>`<option value="${n}" ${n===sumDays?'selected':''}>Last ${n} days</option>`).join('')}</select><button class="btn" data-a="copy">Copy</button></div></section><section class="card"><pre class="sum" id="sumtxt">${esc(buildSummary(sumDays))}</pre></section>`;
+}
+
+/* ---------- Settings ---------- */
+function listEditor(kind,title){
+  return`<section class="card"><h2>${title}</h2>${S.config[kind].map((n,i)=>`<div class="li"><span>${esc(n)}</span><button data-a="rm" data-kind="${kind}" data-i="${i}">Remove</button></div>`).join('')}<div class="flex" style="margin-top:8px"><input type="text" id="add-${kind}" placeholder="Add new…" style="flex:1"><button class="btn" data-a="add" data-kind="${kind}">Add</button></div></section>`;
+}
+function viewSettings(){
+  $('#view').innerHTML=listEditor('pain','Pain items (No / Yes / Bad / Very bad)')+listEditor('spasm','Muscle spasm areas (free text)')+listEditor('treat','Treatments (Yes / No + note)')+
+  `<div class="muted" style="margin:-4px 4px 12px">Removing an item hides it from the daily form. Past entries are kept.</div>
+  <section class="card"><h2>Your data</h2><div class="muted" style="margin-bottom:8px">Everything is stored only on this device, in this browser. Export a backup now and then, especially before changing phones.${S.lastExport?`<br>Last export: ${nice(S.lastExport)}`:''}</div>
+  <div class="flex"><button class="btn" data-a="expjson">Export backup</button><button class="btn alt" data-a="expcsv">Export CSV</button><button class="btn alt" data-a="imp">Import backup</button></div>
+  <input type="file" id="file" accept=".json,application/json" hidden>
+  <div style="margin-top:16px"><button class="btn danger" data-a="wipe">Delete all data</button></div></section>`;
+}
+function download(name,text,type){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type}));a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},500);}
+function exportJSON(){S.lastExport=today();save();download('pain-log-backup-'+today()+'.json',JSON.stringify(S,null,1),'application/json');toast('Backup downloaded');}
+function exportCSV(){
+  const P=allKeys('pain'),Sp=allKeys('spasm'),T=allKeys('treat');
+  const q=v=>'"'+String(v==null?'':v).replace(/"/g,'""')+'"';
+  const head=['date','biggest problem',...P.map(k=>'pain: '+k),...Sp.map(k=>'spasm: '+k),'inhibitions',...T.map(k=>'treatment: '+k),...T.map(k=>'note: '+k),'other treatment','medical'];
+  const rows=Object.keys(S.entries).sort().map(d=>{const e=S.entries[d];return[d,e.biggest,...P.map(k=>e.pain[k]===undefined?'':LV[e.pain[k]]),...Sp.map(k=>e.spasm[k]||''),e.inhib,...T.map(k=>e.treat[k]||''),...T.map(k=>e.treatNote[k]||''),e.other,e.medical].map(q).join(',');});
+  download('pain-log-'+today()+'.csv',[head.map(q).join(','),...rows].join('\n'),'text/csv');
+}
+
+/* ---------- Wiring ---------- */
+function render(){
+  document.querySelectorAll('#tabs button').forEach(b=>b.classList.toggle('on',b.dataset.t===tab));
+  ({today:viewToday,history:viewHistory,trends:viewTrends,summary:viewSummary,settings:viewSettings})[tab]();
+  window.scrollTo(0,0);
+}
+$('#tabs').addEventListener('click',e=>{const b=e.target.closest('button');if(b){tab=b.dataset.t;render();}});
+const V=$('#view');
+V.addEventListener('click',e=>{
+  const h=e.target.closest('.hist');if(h){cur=h.dataset.d;tab='today';render();return;}
+  const seg=e.target.closest('.seg');
+  if(seg&&e.target.tagName==='BUTTON'){
+    const k=seg.dataset.k,n=seg.dataset.n,btn=e.target,en=ent();
+    const val=k==='pain'?+btn.dataset.v:btn.dataset.v;
+    if(en[k][n]===val)delete en[k][n];else en[k][n]=val;
+    seg.querySelectorAll('button').forEach(b=>{b.className='';});
+    if(en[k][n]!==undefined)btn.className='on '+(k==='pain'?'l'+val:val);
+    save();return;
+  }
+  const b=e.target.closest('button[data-a]');if(!b)return;
+  const a=b.dataset.a;
+  if(a==='prev'){cur=addDays(cur,-1);render();}
+  else if(a==='next'){if(cur<today()){cur=addDays(cur,1);render();}}
+  else if(a==='allno'){const en=ent();S.config.pain.forEach(n=>{if(en.pain[n]===undefined)en.pain[n]=0;});save();render();}
+  else if(a==='copy'){const t=$('#sumtxt').textContent;(navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(()=>toast('Copied'),()=>{const r=document.createRange();r.selectNodeContents($('#sumtxt'));getSelection().removeAllRanges();getSelection().addRange(r);toast('Select & copy manually');});}
+  else if(a==='add'){const kind=b.dataset.kind,inp=$('#add-'+kind),v=inp.value.trim();if(v&&!S.config[kind].includes(v)){S.config[kind].push(v);save();render();}}
+  else if(a==='rm'){S.config[b.dataset.kind].splice(+b.dataset.i,1);save();render();}
+  else if(a==='expjson')exportJSON();
+  else if(a==='expcsv')exportCSV();
+  else if(a==='imp')$('#file').click();
+  else if(a==='wipe'){if(confirm('Delete ALL entries and settings from this device? This cannot be undone.')&&confirm('Really delete everything? Consider exporting a backup first.')){S={config:JSON.parse(JSON.stringify(DEF)),entries:{},lastExport:null};save();render();}}
+});
+V.addEventListener('input',e=>{
+  const t=e.target,f=t.dataset.f;
+  if(f){const en=ent();if(f==='spasm')en.spasm[t.dataset.n]=t.value;else if(f==='tnote')en.treatNote[t.dataset.n]=t.value;else en[f]=t.value;saveSoon();}
+});
+V.addEventListener('change',e=>{
+  const t=e.target;
+  if(t.id==='dp'&&t.value){cur=t.value>today()?today():t.value;render();}
+  else if(t.id==='trk'){tr.key=t.value;render();}
+  else if(t.id==='trr'){tr.range=t.value;render();}
+  else if(t.id==='trc'){tr.cycle=+t.value||28;render();}
+  else if(t.id==='sd'){sumDays=+t.value;render();}
+  else if(t.id==='file'&&t.files[0]){
+    const fr=new FileReader();
+    fr.onload=()=>{try{const r=JSON.parse(fr.result);if(!r.entries)throw 0;
+      const n=Object.keys(r.entries).length;
+      if(!confirm(`Import ${n} days? Days with the same date will be overwritten by the backup.`))return;
+      Object.assign(S.entries,r.entries);
+      if(r.config)for(const k of['pain','spasm','treat'])(r.config[k]||[]).forEach(x=>{if(!S.config[k].includes(x))S.config[k].push(x);});
+      save();toast('Imported '+n+' days');render();}catch(_){toast('That file is not a valid backup');}};
+    fr.readAsText(t.files[0]);
+  }
+});
+
+try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist();}catch(e){}
+if('serviceWorker' in navigator&&location.protocol.startsWith('http'))navigator.serviceWorker.register('sw.js').catch(()=>{});
+render();
+</script>
+</body>
+</html>
