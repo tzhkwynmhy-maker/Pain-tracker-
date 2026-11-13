@@ -1,6 +1,6 @@
-const C = 'painlog-v1';
+const C = 'painlog-v2';
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(C).then(c => c.addAll(['./', 'index.html', 'manifest.webmanifest', 'icon.svg'])));
+  e.waitUntil(caches.open(C).then(c => c.addAll(['./', 'index.html', 'manifest.webmanifest', 'icon.svg', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png'])));
   self.skipWaiting();
 });
 self.addEventListener('activate', e => {
